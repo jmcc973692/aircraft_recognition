@@ -1,0 +1,8 @@
+{
+    "img_dir": "./input",
+    "batch_size": 80,
+    "num_workers": 10,
+    "pin_memory": true,
+    "lr": 0.001,
+    "num_epochs": 1
+}

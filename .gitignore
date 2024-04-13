@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+
+# Exclude .vscode directory
+.vscode/
+.VSCodeCounter/
+
+# Exclude output directories
+submissions/
+output/
+trials/
+
+# MLFlow
+mlruns/
+
+# Pytest
+.pytest_cache/
+
+input/
