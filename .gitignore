@@ -22,4 +22,5 @@ mlruns/
 # Pytest
 .pytest_cache/
 
+# Input Data
 input/
