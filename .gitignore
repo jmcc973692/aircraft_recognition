@@ -24,3 +24,6 @@ mlruns/
 
 # Input Data
 input/
+
+# Data Directory
+data/
