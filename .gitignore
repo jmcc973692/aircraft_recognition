@@ -27,3 +27,6 @@ input/
 
 # Data Directory
 data/
+
+# Temp Directory
+temp/
