@@ -1,13 +1,13 @@
 import torch
 
 
-class TrainerSSDLite:
+class TrainerSSD:
     def __init__(self, model, device, optimizer):
         """
-        Initialize the Trainer with an SSDLite model, device, and optimizer.
+        Initialize the Trainer with an SSD model, device, and optimizer.
 
         Args:
-            model (torch.nn.Module): The SSDLite model to train.
+            model (torch.nn.Module): The SSD model to train.
             device (torch.device): The device to use for training (CPU/GPU).
             optimizer (torch.optim.Optimizer): The optimizer for training.
         """

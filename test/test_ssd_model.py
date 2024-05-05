@@ -1,13 +1,13 @@
 import pytest
 import torch
 
-from src.SSDModel import SSDModel
+from src.SSDLiteModel import SSDLiteModel
 
 
 @pytest.fixture
 def ssd_model():
     # Creates an instance of SSDModel with 16 classes (including background)
-    return SSDModel(num_classes=16, device="cuda" if torch.cuda.is_available() else "cpu")
+    return SSDLiteModel(num_classes=16, device="cuda" if torch.cuda.is_available() else "cpu")
 
 
 def test_model_initialization(ssd_model):

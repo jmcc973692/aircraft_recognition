@@ -16,7 +16,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 from src.AircraftBoundingDataset import AircraftBoundingDataset
 from src.ImageTranformerAugment import ImageTransformerAugment
 from src.ImageTransformer import ImageTransformer
-from src.SSDLiteModel import SSDLiteModel
+from src.SSD512Model import SSD512Model
 from src.TrainerSSD import TrainerSSD  # Import the Trainer class
 from util.custom_collate import custom_collate_fn
 
@@ -47,8 +47,12 @@ def main():
     csv_file = "data/all_dataset_bounding_boxes.csv"
 
     # Initialize the dataset with specific resizing and normalization
-    transform_augment = ImageTransformerAugment(resize_dims=(320, 320), mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    basic_transform = ImageTransformer(resize_dims=(320, 320), mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    transform_augment = ImageTransformerAugment(
+        resize_dims=(512, 512), mean=[0.48236, 0.45882, 0.40784], std=[1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0]
+    )
+    basic_transform = ImageTransformer(
+        resize_dims=(512, 512), mean=[0.48236, 0.45882, 0.40784], std=[1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0]
+    )
     print("Initialized the ImageTransformer")
 
     # Read the CSV file
@@ -83,7 +87,7 @@ def main():
 
     # Initialize the model
     num_classes = 2  # Adjust based on the number of classes in your dataset
-    model = SSDLiteModel(num_classes=num_classes, detection_threshold=0.3, iou_threshold=0.5, device=device)
+    model = SSD512Model(num_classes=num_classes, detection_threshold=0.3, iou_threshold=0.5, device=device)
     print("Initialized the Model")
 
     # Create the datasets with the new CSV files
@@ -94,36 +98,33 @@ def main():
     print("Creating DataLoaders...")
     train_loader = DataLoader(
         train_dataset,
-        batch_size=128,
+        batch_size=24,
         shuffle=True,
         num_workers=8,
-        prefetch_factor=3,
+        prefetch_factor=2,
         pin_memory=True,
         collate_fn=custom_collate_fn,
     )
     valid_loader = DataLoader(
         valid_dataset,
-        batch_size=128,
+        batch_size=24,
         shuffle=False,
         num_workers=8,
-        prefetch_factor=3,
+        prefetch_factor=2,
         pin_memory=True,
         collate_fn=custom_collate_fn,
     )
     print("DataLoaders Created")
 
     # Set up the optimizer
-    learning_rate = 0.15  # Adjust as needed
-    weight_decay = 0.00004
+    learning_rate = 0.002  # Adjust as needed
+    weight_decay = 0.0005
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
-    # Create an instance of TrainerFasterRCNN with the model, device, and optimizer
-    trainer = TrainerSSD(model, device, optimizer)
-
     # Initialize learning rate scheduler
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=150, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", patience=5, factor=0.5, verbose=True)
 
-    # Create an instance of TrainerSSDLite with the model, device, and optimizer
+    # Create an instance of with the model, device, and optimizer
     trainer = TrainerSSD(model, device, optimizer)
 
     # Initialize variables for tracking best validation loss and best model
@@ -132,16 +133,16 @@ def main():
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # File path for saving the model with the date and timestamp
-    model_path = f"models/detection_model_SSDLite_{timestamp}.pth"
+    model_path = f"models/detection_model_SSD512_{timestamp}.pth"
 
     # Epoch parameters
-    max_epochs = 200  # Maximum number of epochs to train
-    early_stop_patience = 10  # Number of epochs without improvement before stopping
+    max_epochs = 150  # Maximum number of epochs to train
+    early_stop_patience = 8  # Number of epochs without improvement before stopping
     start_epoch = 0
     no_improvement_count = 0  # Counter for epochs without improvement
 
     # Check if a checkpoint exists
-    checkpoint_path = "temp/checkpoints/SSDLite_checkpoint.pt"
+    checkpoint_path = "temp/checkpoints/SSD512_checkpoint.pt"
     if os.path.isfile(checkpoint_path):
         print(f"=> loading checkpoint '{checkpoint_path}'")
         checkpoint = torch.load(checkpoint_path)

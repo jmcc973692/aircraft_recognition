@@ -24,9 +24,8 @@ class AircraftBoundingDataset(Dataset):
 
         # Group annotations by image filename
         self.image_groups = defaultdict(list)
-        for _, row in self.annotations.iterrows():
-            filename = row["filename"]
-            self.image_groups[filename].append(row)
+        for index, row in self.annotations.iterrows():
+            self.image_groups[row["filename"]].append(row)
 
     def __len__(self):
         return len(self.image_groups)  # Number of unique images in the dataset
@@ -40,36 +39,23 @@ class AircraftBoundingDataset(Dataset):
         """
         # Get the image key
         image_key = list(self.image_groups.keys())[index]
-        img_name = os.path.join(self.img_dir, f"{image_key}.jpg")
-        image = Image.open(img_name).convert("RGB")
+        image_data = self.image_groups[image_key]
+        img_path = os.path.join(self.img_dir, f"{image_key}.jpg")
+        image = Image.open(img_path).convert("RGB")
 
-        # Gather annotations for this image
-        annotations = self.image_groups[image_key]
-
-        # Create bounding boxes and a single label (1 for aircraft)
+        # Aggregate all bounding boxes and labels for the image
         boxes = []
-        for annotation in annotations:
-            xmin = annotation["xmin"]
-            ymin = annotation["ymin"]
-            xmax = annotation["xmax"]
-            ymax = annotation["ymax"]
+        labels = []
+        for data in image_data:
+            boxes.append([data["xmin"], data["ymin"], data["xmax"], data["ymax"]])
+            labels.append(1)  # Assuming label '1' for all aircraft
 
-            # Validate bounding box coordinates
-            if xmin >= xmax or ymin >= ymax:
-                raise ValueError(f"Invalid bounding box coordinates: {xmin, ymin, xmax, ymax}")
+        # Convert boxes and labels to tensors
+        boxes = torch.tensor(boxes, dtype=torch.float32)
+        labels = torch.tensor(labels, dtype=torch.int64)
 
-            # Add bounding box to the list
-            boxes.append(torch.tensor([xmin, ymin, xmax, ymax]))
+        target = {"boxes": boxes, "labels": labels}
 
-        # Convert the list of boxes into a tensor
-        boxes = torch.stack(boxes)
-
-        # Use a single label for all aircraft (1)
-        labels = torch.tensor([1] * len(boxes))  # All aircraft are labeled as 1
-
-        target = {"boxes": boxes, "labels": labels, "original_dims": image.size}
-
-        # Apply any transformation (e.g., resizing and normalizing)
         if self.transform:
             image, target = self.transform(image, target)
 
