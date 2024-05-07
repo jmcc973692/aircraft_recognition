@@ -10,7 +10,7 @@ from src.SSD512Model import SSD512Model
 from src.SSDLiteModel import SSDLiteModel
 
 # Path setup
-model_path = "models/detection_model_SSD512_2024-05-04_19-36-29.pth"
+model_path = "models/detection_model_SSD512_2024-05-06_14-34-52.pth"
 test_images_dir = "input/test_images"  # Directory containing test images
 output_dir = "temp/annotated_images"
 
@@ -19,7 +19,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = SSD512Model(num_classes=2, detection_threshold=0.3, iou_threshold=0.5, device=device)
+model = SSD512Model(num_classes=2, detection_threshold=0.2, iou_threshold=0.5, device=device)
 # model = SSDLiteModel(num_classes=2, detection_threshold=0.2, iou_threshold=0.3, device=device)
 model.load_state_dict(torch.load(model_path))
 model.eval()

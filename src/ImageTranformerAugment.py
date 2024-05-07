@@ -25,13 +25,17 @@ class ImageTransformerAugment:
             [
                 A.HorizontalFlip(p=0.5),
                 A.RandomResizedCrop(height=320, width=320, scale=(0.08, 1.0), ratio=(0.75, 1.33), p=0.5),
-                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.3),
-                A.ColorJitter(p=0.2),
+                A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.4),
+                A.ColorJitter(p=0.25),
                 A.GaussianBlur(p=0.1),
-                A.GaussNoise(var_limit=(10.0, 50.0), p=0.1),
+                A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
                 A.Rotate(limit=15, p=0.3),
-                A.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.3, p=0.2),
+                A.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.4, p=0.3),
                 A.RandomRain(drop_length=3, blur_value=1, p=0.2),
+                A.RandomSnow(snow_point_lower=0.1, snow_point_upper=0.3, p=0.2),
+                A.RandomShadow(
+                    shadow_roi=(0, 0.5, 1, 1), num_shadows_lower=1, num_shadows_upper=3, shadow_dimension=5, p=0.3
+                ),
             ],
             bbox_params=A.BboxParams(format="pascal_voc", label_fields=["labels"], min_area=2, min_visibility=0.05),
         )
