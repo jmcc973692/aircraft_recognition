@@ -1,6 +1,10 @@
-from typing import Tuple, Union
+from typing import Tuple
 
+import albumentations as A
+import cv2
+import numpy as np
 import torch
+from albumentations.pytorch import ToTensorV2
 from PIL import Image
 from torchvision import transforms
 
@@ -16,23 +20,52 @@ class CroppedImageTransformer:
         """
         self.resize_dims = resize_dims
         self.augment = augment
-        # Normalize with pre-defined mean and std values for EfficientNetB4.
-        self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-        # Basic transformations: resize, convert to tensor, and normalize.
-        self.base_transform = transforms.Compose(
-            [transforms.Resize(self.resize_dims, interpolation=Image.BILINEAR), transforms.ToTensor(), self.normalize]
-        )
-
-        # Augmented transformations: color jittering, random flipping, random rotation, followed by basic transformations.
-        self.augment_transform = transforms.Compose(
+        # Define the basic transformations
+        self.base_transform = A.Compose(
             [
-                transforms.ColorJitter(),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomRotation(10),
-                self.base_transform,
+                A.PadIfNeeded(
+                    min_height=self.resize_dims[1],
+                    min_width=self.resize_dims[0],
+                    border_mode=cv2.BORDER_CONSTANT,
+                    value=(0, 0, 0),
+                ),
+                A.Resize(self.resize_dims[0], self.resize_dims[1]),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
             ]
         )
+
+        # Define augmented transformations
+        if self.augment:
+            self.augment_transform = A.Compose(
+                [
+                    A.ShiftScaleRotate(
+                        shift_limit=0.0625,
+                        scale_limit=0.1,
+                        rotate_limit=20,
+                        p=0.4,
+                        border_mode=cv2.BORDER_CONSTANT,
+                        value=(0, 0, 0),
+                    ),
+                    A.PadIfNeeded(
+                        min_height=self.resize_dims[1],
+                        min_width=self.resize_dims[0],
+                        border_mode=cv2.BORDER_CONSTANT,
+                        value=(0, 0, 0),
+                    ),
+                    A.HorizontalFlip(p=0.5),
+                    A.GaussNoise(p=0.2),
+                    A.GaussianBlur(blur_limit=(3, 7), p=0.2),
+                    A.ColorJitter(p=0.4),
+                    A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.4),
+                    A.Resize(self.resize_dims[0], self.resize_dims[1]),
+                    A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                    ToTensorV2(),
+                ]
+            )
+        else:
+            self.augment_transform = self.base_transform
 
     def __call__(self, img: Image.Image) -> torch.Tensor:
         """
@@ -44,18 +77,13 @@ class CroppedImageTransformer:
         Returns:
         torch.Tensor: The transformed image as a tensor.
         """
-        # Padding if necessary to ensure the image has minimum dimensions.
-        if img.width < self.resize_dims[0] or img.height < self.resize_dims[1]:
-            padding = [
-                (self.resize_dims[0] - img.width) // 2,  # left padding
-                (self.resize_dims[1] - img.height) // 2,  # top padding
-                (self.resize_dims[0] - img.width + 1) // 2,  # right padding
-                (self.resize_dims[1] - img.height + 1) // 2,  # bottom padding
-            ]
-            img = transforms.Pad(padding, fill=0, padding_mode="constant")(img)
+        # Convert PIL image to numpy array
+        img_np = np.array(img)
 
         # Apply augmented or base transformation based on the `augment` flag.
         if self.augment:
-            return self.augment_transform(img)
+            augmented = self.augment_transform(image=img_np)
         else:
-            return self.base_transform(img)
+            augmented = self.base_transform(image=img_np)
+
+        return augmented["image"]
