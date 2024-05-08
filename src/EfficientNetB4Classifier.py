@@ -5,7 +5,7 @@ from timm.models.efficientnet import default_cfgs
 
 
 class EfficientNetB4Classifier(torch.nn.Module):
-    def __init__(self, num_classes=15, pretrained=True, device=None):
+    def __init__(self, num_classes=16, pretrained=True, device=None):
         super(EfficientNetB4Classifier, self).__init__()
         # Load a pre-trained EfficientNet-B7 model
         self.model = timm.create_model("efficientnet_b4", pretrained=pretrained, num_classes=num_classes)

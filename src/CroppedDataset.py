@@ -18,7 +18,7 @@ class CroppedDataset(Dataset):
         self.images = images
         self.labels = labels
         self.transformer = transformer
-        self.num_classes = 15
+        self.num_classes = 16
 
     def __len__(self):
         """

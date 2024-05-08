@@ -103,8 +103,8 @@ def load_checkpoint(model, optimizer, scheduler_warmup, scheduler_cosine, checkp
 
 # Warmup Scheduler
 def warmup_scheduler(epoch):
-    if epoch < 8:
-        return float(epoch) / 8
+    if epoch < 6:
+        return float(epoch) / 6
     return 1
 
 
@@ -182,7 +182,7 @@ def main():
     print("DataLoaders Created")
 
     # Initialize the Model
-    model = EfficientNetB4Classifier(num_classes=15, pretrained=True, device=device)
+    model = EfficientNetB4Classifier(num_classes=16, pretrained=True, device=device)
     print("Initialized the Model")
 
     # Setup Optimizer Excluding weight decay from batch norm
@@ -194,7 +194,7 @@ def main():
 
     optimizer = torch.optim.RMSprop(
         [{"params": base_params}, {"params": list(bn_params), "weight_decay": 0}],
-        lr=0.004,
+        lr=0.0025,
         alpha=0.9,
         eps=0.00422,
         weight_decay=5e-6,
@@ -202,12 +202,12 @@ def main():
     )
 
     # Setup Learning Rate Scheduler
-    max_epochs = 80
+    max_epochs = 60
 
     # Cosine Annealing Scheduler
     # Initialize schedulers
     scheduler_warmup = LambdaLR(optimizer, lr_lambda=warmup_scheduler)
-    scheduler_cosine = CosineAnnealingLR(optimizer, T_max=max_epochs - 8)
+    scheduler_cosine = CosineAnnealingLR(optimizer, T_max=max_epochs - 6)
 
     trainer = TrainerEffNet(model, device, optimizer)
 
@@ -233,7 +233,7 @@ def main():
         valid_loss = trainer.validate_epoch(valid_loader)
 
         # Scheduler update logic
-        if epoch < 8:
+        if epoch < 6:
             scheduler_warmup.step()
             current_lr = scheduler_warmup.get_last_lr()
         else:
