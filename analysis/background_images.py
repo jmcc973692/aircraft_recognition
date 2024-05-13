@@ -20,7 +20,7 @@ def is_within_bounding_boxes(x, y, width, height, bounding_boxes):
     return False
 
 
-def generate_background_images(source_dir, bbox_data, target_dir, num_images=1000):
+def generate_background_images(source_dir, bbox_data, target_dir, num_images=1500):
     os.makedirs(target_dir, exist_ok=True)
     image_files = [f for f in os.listdir(source_dir) if f.endswith((".jpg", ".jpeg", ".png"))]
     images_generated = 0
@@ -33,8 +33,8 @@ def generate_background_images(source_dir, bbox_data, target_dir, num_images=100
 
         with Image.open(img_path) as img:
             for _ in range(10):  # Try up to 10 times per image to find a valid crop
-                crop_width = random.randint(200, 600)
-                crop_height = random.randint(200, 600)
+                crop_width = random.randint(250, 600)
+                crop_height = random.randint(250, 600)
                 x = random.randint(0, max(0, img.width - crop_width))
                 y = random.randint(0, max(0, img.height - crop_height))
 
