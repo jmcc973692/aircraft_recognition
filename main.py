@@ -60,19 +60,11 @@ detection_model_1.to(device)
 
 # Load the fallback SSD model with a lower detection threshold
 detection_model_2 = SSD512Model(
-    num_classes=2, detection_threshold=0.2, iou_threshold=0.6, device=device
+    num_classes=2, detection_threshold=0.14, iou_threshold=0.75, device=device
 )  # Lower threshold
 detection_model_2.load_state_dict(torch.load(detection_model_path))
 detection_model_2.eval()
 detection_model_2.to(device)
-
-# Load the fallback SSD model with a lower detection threshold
-detection_model_3 = SSD512Model(
-    num_classes=2, detection_threshold=0.1, iou_threshold=0.8, device=device
-)  # Lower threshold
-detection_model_3.load_state_dict(torch.load(detection_model_path))
-detection_model_3.eval()
-detection_model_3.to(device)
 
 # Load the Classification Model
 classification_model = EfficientNetB4Classifier(num_classes=16, device=device)
@@ -98,6 +90,7 @@ no_detection_images = []
 detection_scores = {}
 
 # Process each test image for detection and cropping
+# Process each test image for detection and cropping
 for img_name in test_images:
     img_path = os.path.join(test_images_dir, img_name)
     image = Image.open(img_path).convert("RGB")
@@ -118,16 +111,34 @@ for img_name in test_images:
 
     # Attempt with second model if first failed
     if len(outputs[0]["boxes"]) == 0:
-        third_model_used += 1
-        with torch.no_grad():
-            fallback_outputs_2 = detection_model_3(input_tensor)
-        outputs = fallback_outputs_2
-
-    # Handle case where no boxes are detected by any model
-    if len(outputs[0]["boxes"]) == 0:
         no_detections += 1
         no_detection_images.append(img_name)
-        image.save(os.path.join(cropped_images_dir, img_name))  # Save the full image
+
+        # Perform 5 fixed crops: 4 corners and center
+        crop_size = 512  # Assuming you want to use the same size as your detection model input
+        crops = [
+            image.crop((0, 0, crop_size, crop_size)),  # Top-left
+            image.crop((original_width - crop_size, 0, original_width, crop_size)),  # Top-right
+            image.crop((0, original_height - crop_size, crop_size, original_height)),  # Bottom-left
+            image.crop(
+                (original_width - crop_size, original_height - crop_size, original_width, original_height)
+            ),  # Bottom-right
+            image.crop(
+                (
+                    (original_width - crop_size) // 2,
+                    (original_height - crop_size) // 2,
+                    (original_width + crop_size) // 2,
+                    (original_height + crop_size) // 2,
+                )
+            ),  # Center
+        ]
+
+        # Save the cropped images
+        for i, crop in enumerate(crops):
+            cropped_image_path = os.path.join(cropped_images_dir, f"{img_name[:-4]}_crop{i}.jpg")
+            crop.save(cropped_image_path)
+            detection_scores[cropped_image_path] = 1.0  # Assuming a default high confidence score for manual crops
+
         continue
 
     # Crop images based on the bounding boxes
@@ -147,7 +158,6 @@ for img_name in test_images:
 
 print("Cropped images saved to:", cropped_images_dir)
 print(f"Secondary model used for {secondary_model_used} images.")
-print(f"Third model used for {third_model_used} images.")
 print(f"No detections for {no_detections} images.")
 print(f"No Detection Image List: {no_detection_images}")
 
@@ -177,8 +187,11 @@ processed_predictions = {}
 # Assume the filename is something like "img_1_174_1060_2495_1621.jpg" -or- "img_1.jpg"
 for cropped_image_name, prediction in prediction_dict.items():
     # Drop High Background Predictions
-    if prediction[-1] > 0.80:
+    if prediction[-1] > 0.75:
         prediction = prediction[:-1]  # Drop background
+        continue
+
+    if np.max(prediction[:-1]) < 0.3:
         continue
 
     # # Adjust low probabilities to 0
@@ -205,23 +218,7 @@ for cropped_image_name, prediction in prediction_dict.items():
 class_counts = [357, 332, 256, 371, 587, 327, 250, 278, 735, 830, 807, 329, 656, 348, 463]
 total_count = sum(class_counts)
 # default_probability = [count / total_count for count in class_counts]
-default_probability = [
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-    1 / 15,
-]
+default_probability = [1 / 15] * 15
 
 for img in test_images:
     img_name = img.split(".")[0]
