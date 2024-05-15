@@ -8,6 +8,7 @@ from torchvision.transforms.functional import normalize, to_tensor
 
 from src.CroppedImageTransformer import CroppedImageTransformer
 from src.EfficientNetB4Classifier import EfficientNetB4Classifier
+from src.EfficientNetV2MClassifier import EfficientNetV2MClassifier
 from src.ImageTransformer import ImageTransformer
 from src.SSD512Model import SSD512Model
 from util.submissions import create_submission
@@ -59,7 +60,7 @@ detection_model_1.to(device)
 
 # Load the fallback SSD model with a lower detection threshold
 detection_model_2 = SSD512Model(
-    num_classes=2, detection_threshold=0.2, iou_threshold=0.5, device=device
+    num_classes=2, detection_threshold=0.2, iou_threshold=0.6, device=device
 )  # Lower threshold
 detection_model_2.load_state_dict(torch.load(detection_model_path))
 detection_model_2.eval()
@@ -67,14 +68,14 @@ detection_model_2.to(device)
 
 # Load the fallback SSD model with a lower detection threshold
 detection_model_3 = SSD512Model(
-    num_classes=2, detection_threshold=0.1, iou_threshold=0.5, device=device
+    num_classes=2, detection_threshold=0.1, iou_threshold=0.8, device=device
 )  # Lower threshold
 detection_model_3.load_state_dict(torch.load(detection_model_path))
 detection_model_3.eval()
 detection_model_3.to(device)
 
 # Load the Classification Model
-classification_model = EfficientNetB4Classifier(num_classes=16, pretrained=True, device=device)
+classification_model = EfficientNetB4Classifier(num_classes=16, device=device)
 classification_model.load_state_dict(torch.load(classification_model_path))
 classification_model.eval()
 classification_model.to(device)
@@ -176,7 +177,7 @@ processed_predictions = {}
 # Assume the filename is something like "img_1_174_1060_2495_1621.jpg" -or- "img_1.jpg"
 for cropped_image_name, prediction in prediction_dict.items():
     # Drop High Background Predictions
-    if prediction[-1] > 0.9:
+    if prediction[-1] > 0.80:
         prediction = prediction[:-1]  # Drop background
         continue
 
@@ -203,7 +204,24 @@ for cropped_image_name, prediction in prediction_dict.items():
 # Training Data Class Distribution
 class_counts = [357, 332, 256, 371, 587, 327, 250, 278, 735, 830, 807, 329, 656, 348, 463]
 total_count = sum(class_counts)
-default_probability = [count / total_count for count in class_counts]
+# default_probability = [count / total_count for count in class_counts]
+default_probability = [
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+    1 / 15,
+]
 
 for img in test_images:
     img_name = img.split(".")[0]
