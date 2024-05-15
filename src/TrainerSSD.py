@@ -1,4 +1,6 @@
 import torch
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+from torchvision.ops import box_convert
 
 
 class TrainerSSD:
@@ -49,30 +51,31 @@ class TrainerSSD:
         return total_loss / len(train_loader)
 
     def validate_epoch(self, valid_loader):
-        """
-        Validate the model for one epoch.
+        self.model.eval()  # Ensure the model is in evaluation mode
+        metric = MeanAveragePrecision(box_format="xyxy", class_metrics=True)
 
-        Args:
-            valid_loader (torch.utils.data.DataLoader): The validation data loader.
-
-        Returns:
-            float: The average validation loss for the epoch.
-        """
-        self.model.train()  # Use Loss for now
-        total_loss = 0.0  # Accumulate loss for the epoch
-
-        with torch.no_grad():  # No gradients during validation
+        with torch.no_grad():
             for images, targets in valid_loader:
-                images = [img.to(self.device) for img in images]  # Move images to the device
-                targets = [{k: v.to(self.device) for k, v in tgt.items()} for tgt in targets]
+                images = [img.to(self.device) for img in images]
+                outputs = self.model(images)  # Get model predictions
 
-                # Compute the losses without backpropagation
-                loss_dict = self.model(images, targets)
+                # Prepare detections and ground truths for torchmetrics
+                for i, output in enumerate(outputs):
+                    pred_boxes = output["boxes"]
+                    pred_labels = output["labels"]
+                    pred_scores = output["scores"]
 
-                losses = sum(loss_dict.values())  # Aggregate total loss
+                    # Ground truth
+                    gt_boxes = targets[i]["boxes"]
+                    gt_labels = targets[i]["labels"]
 
-                total_loss += losses.item()  # Accumulate total loss
+                    # Update metric for each prediction and ground truth pair
+                    metric.update(
+                        preds=[{"boxes": pred_boxes.cpu(), "scores": pred_scores.cpu(), "labels": pred_labels.cpu()}],
+                        target=[{"boxes": gt_boxes.cpu(), "labels": gt_labels.cpu()}],
+                    )
 
-        self.model.eval()
-        # Return the average validation loss for the epoch
-        return total_loss / len(valid_loader)
+        # Compute mAP
+        result = metric.compute()
+        mean_ap = result["map"].item()  # Overall mAP
+        return -mean_ap

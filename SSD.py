@@ -87,7 +87,7 @@ def main():
 
     # Initialize the model
     num_classes = 2  # Adjust based on the number of classes in your dataset
-    model = SSD512Model(num_classes=num_classes, detection_threshold=0.3, iou_threshold=0.5, device=device)
+    model = SSD512Model(num_classes=num_classes, detection_threshold=0.4, iou_threshold=0.5, device=device)
     print("Initialized the Model")
 
     # Create the datasets with the new CSV files
@@ -98,18 +98,18 @@ def main():
     print("Creating DataLoaders...")
     train_loader = DataLoader(
         train_dataset,
-        batch_size=24,
+        batch_size=28,
         shuffle=True,
-        num_workers=8,
+        num_workers=9,
         prefetch_factor=2,
         pin_memory=True,
         collate_fn=custom_collate_fn,
     )
     valid_loader = DataLoader(
         valid_dataset,
-        batch_size=24,
+        batch_size=28,
         shuffle=False,
-        num_workers=8,
+        num_workers=9,
         prefetch_factor=2,
         pin_memory=True,
         collate_fn=custom_collate_fn,
@@ -122,7 +122,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     # Initialize learning rate scheduler
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", patience=5, factor=0.5, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", patience=5, factor=0.6)
 
     # Create an instance of with the model, device, and optimizer
     trainer = TrainerSSD(model, device, optimizer)
@@ -163,6 +163,10 @@ def main():
         valid_loss = trainer.validate_epoch(valid_loader)
 
         scheduler.step(valid_loss)  # Update learning rate scheduler based on validation loss
+
+        current_lr = scheduler.get_last_lr()
+
+        print(f"Epoch {epoch + 1}/{max_epochs}, Current Learning Rate: {current_lr[0]:.6f}")
 
         # Check for improvement
         if valid_loss < best_valid_loss:

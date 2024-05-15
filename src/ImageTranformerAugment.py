@@ -26,7 +26,7 @@ class ImageTransformerAugment:
                 A.HorizontalFlip(p=0.5),
                 A.RandomResizedCrop(height=320, width=320, scale=(0.08, 1.0), ratio=(0.75, 1.33), p=0.5),
                 A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.4),
-                A.ColorJitter(p=0.25),
+                A.ColorJitter(p=0.4),
                 A.GaussianBlur(p=0.1),
                 A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
                 A.Rotate(limit=15, p=0.3),
